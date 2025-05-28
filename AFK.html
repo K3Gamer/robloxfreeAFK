@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Game Credit Loader</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      margin: 0;
+      position: relative;
+    }
+    .container {
+      text-align: center;
+      background: white;
+      padding: 30px 25px;
+      border-radius: 12px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+      width: 320px;
+    }
+    .container h2 {
+      margin-bottom: 20px;
+      color: #333;
+    }
+    input {
+      margin: 10px 0;
+      padding: 12px;
+      width: 100%;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 16px;
+      transition: 0.3s;
+    }
+    input:focus {
+      border-color: #764ba2;
+      outline: none;
+    }
+    button {
+      padding: 12px;
+      width: 100%;
+      background: #764ba2;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;
+      margin-top: 10px;
+      transition: background 0.3s;
+    }
+    button:hover {
+      background: #5b3f8c;
+    }
+    .separator {
+      margin: 15px 0;
+      color: #888;
+    }
+    .progress-bar {
+      margin-top: 20px;
+      width: 100%;
+      background: #eee;
+      height: 20px;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .progress {
+      height: 100%;
+      width: 0;
+      background: #4caf50;
+      transition: width 0.1s linear;
+    }
+    .footer {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      color: white;
+      font-size: 14px;
+    }
+    .popup {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0.8);
+      background: white;
+      padding: 20px 30px;
+      border-radius: 10px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+      z-index: 1000;
+      display: none;
+      animation: popupZoom 0.3s forwards;
+      max-width: 300px;
+      text-align: center;
+    }
+    @keyframes popupZoom {
+      to {
+        transform: translate(-50%, -50%) scale(1);
+      }
+    }
+    .popup h3 {
+      margin: 0 0 10px;
+    }
+    .popup button {
+      background: #764ba2;
+      margin-top: 10px;
+      width: 100%;
+    }
+    .overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0,0,0,0.5);
+      z-index: 999;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container" id="auth">
+    <h2 id="auth-title">Đăng nhập tài khoản</h2>
+    <input type="text" id="email" placeholder="Email hoặc Username" />
+    <input type="password" id="password" placeholder="Nhập mật khẩu" />
+    <button onclick="login()">Đăng nhập</button>
+    <div class="separator">hoặc</div>
+    <button onclick="register()">Tạo tài khoản mới</button>
+  </div>
+
+  <div class="container" id="main" style="display: none;">
+    <h2>Chào mừng, <span id="username"></span>!</h2>
+    <p>Bạn đang có <strong><span id="credits">0</span></strong> credit</p>
+    <div class="progress-bar">
+      <div class="progress" id="progress"></div>
+    </div>
+    <button onclick="logout()">Đăng xuất</button>
+    <button onclick="donate()" id="donateBtn">Donate</button>
+    <button id="adminCreditBtn" onclick="openAdminPopup()" style="display: none;">Tăng credit (Admin)</button>
+    <button id="adminDebitBtn" onclick="openAdminDebitPopup()" style="display: none;">Trừ credit (Admin)</button>
+    <button id="adminDeleteBtn" onclick="openAdminDeletePopup()" style="display: none;">Xóa tài khoản (Admin)</button>
+  </div>
+
+  <div class="footer">Make By K3</div>
+
+  <div class="overlay" id="overlay"></div>
+
+  <div class="popup" id="popup">
+    <h3>Thông báo</h3>
+    <p></p>
+    <button onclick="closePopup()">Đóng</button>
+  </div>
+
+  <!-- Admin Popups -->
+  <div class="popup" id="adminPopup" style="display:none;">
+    <h3>Tăng credit cho user</h3>
+    <input type="text" id="targetUser" placeholder="Username hoặc Email" />
+    <input type="number" id="creditAmount" placeholder="Số credit muốn tặng" />
+    <button onclick="addCreditsToUser()">Tăng</button>
+    <button onclick="closeAdminPopup()">Hủy</button>
+  </div>
+
+  <div class="popup" id="adminDebitPopup" style="display:none;">
+    <h3>Trừ credit của user</h3>
+    <input type="text" id="targetUserDebit" placeholder="Username hoặc Email" />
+    <input type="number" id="creditAmountDebit" placeholder="Số credit muốn trừ" />
+    <button onclick="deductCreditsFromUser()">Trừ</button>
+    <button onclick="closeAdminDebitPopup()">Hủy</button>
+  </div>
+
+  <div class="popup" id="adminDeletePopup" style="display:none;">
+    <h3>Xóa tài khoản user</h3>
+    <input type="text" id="targetUserDelete" placeholder="Username hoặc Email" />
+    <button onclick="deleteUser()">Xóa</button>
+    <button onclick="closeAdminDeletePopup()">Hủy</button>
+  </div>
+
+<script>
+  let credits = 0;
+  let progress = 0;
+  let interval;
+  let currentUser = '';
+
+  function loadUserCredits(email) {
+    const creditData = JSON.parse(localStorage.getItem('credits') || '{}');
+    return creditData[email] || 0;
+  }
+
+  function saveUserCredits(email, value) {
+    const creditData = JSON.parse(localStorage.getItem('credits') || '{}');
+    creditData[email] = value;
+    localStorage.setItem('credits', JSON.stringify(creditData));
+  }
+
+  function login() {
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+    const users = JSON.parse(localStorage.getItem('users') || '{}');
+
+    if (email && password) {
+      if (users[email] === password) {
+        currentUser = email;
+        credits = loadUserCredits(email);
+        document.getElementById('auth').style.display = 'none';
+        document.getElementById('main').style.display = 'block';
+        document.getElementById('username').textContent = currentUser;
+        document.getElementById('credits').textContent = credits;
+        startProgress();
+
+        if (email.toUpperCase() === 'ADMIN' && password === 'hellokhai.com') {
+          showAdminButtons();
+          document.getElementById('donateBtn').style.display = 'none';
+        } else {
+          hideAdminButtons();
+          document.getElementById('donateBtn').style.display = 'inline-block';
+        }
+      } else {
+        showPopup('Email hoặc mật khẩu không đúng!');
+      }
+    } else {
+      showPopup('Vui lòng nhập đầy đủ email và mật khẩu.');
+    }
+  }
+
+  function register() {
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+
+    if (email && password) {
+      const users = JSON.parse(localStorage.getItem('users') || '{}');
+      if (users[email]) {
+        showPopup('Tài khoản đã tồn tại!');
+      } else {
+        users[email] = password;
+        localStorage.setItem('users', JSON.stringify(users));
+        saveUserCredits(email, 0);
+        showPopup('Tạo tài khoản thành công!');
+        setTimeout(() => {
+          login();
+        }, 1000);
+      }
+    } else {
+      showPopup('Vui lòng nhập đầy đủ email và mật khẩu để đăng ký.');
+    }
+  }
+
+  function logout() {
+    clearInterval(interval);
+    progress = 0;
+    document.getElementById('progress').style.width = '0%';
+    document.getElementById('auth').style.display = 'block';
+    document.getElementById('main').style.display = 'none';
+    document.getElementById('email').value = '';
+    document.getElementById('password').value = '';
+    credits = 0;
+    currentUser = '';
+  }
+
+  function startProgress() {
+    clearInterval(interval);
+    interval = setInterval(() => {
+      if (progress >= 100) {
+        progress = 0;
+        credits++;
+        saveUserCredits(currentUser, credits);
+        document.getElementById('credits').textContent = credits;
+      }
+      progress += 1;
+      document.getElementById('progress').style.width = progress + '%';
+    }, 100);
+  }
+
+  function donate() {
+    window.open('https://docs.google.com/forms/d/e/1FAIpQLSdigrwgFnLJGXAf8CMpMO3S5KEzkDp-OA04ZD419jj4vfxhaA/viewform?usp=header', '_blank');
+  }
+
+  function showAdminButtons() {
+    document.getElementById('adminCreditBtn').style.display = 'inline-block';
+    document.getElementById('adminDebitBtn').style.display = 'inline-block';
+    document.getElementById('adminDeleteBtn').style.display = 'inline-block';
+  }
+
+  function hideAdminButtons() {
+    document.getElementById('adminCreditBtn').style.display = 'none';
+    document.getElementById('adminDebitBtn').style.display = 'none';
+    document.getElementById('adminDeleteBtn').style.display = 'none';
+  }
+
+  function showPopup(message) {
+    const popup = document.getElementById('popup');
+    popup.querySelector('p').textContent = message;
+    document.getElementById('overlay').style.display = 'block';
+    popup.style.display = 'block';
+  }
+
+  function closePopup() {
+    document.getElementById('overlay').style.display = 'none';
+    document.getElementById('popup').style.display = 'none';
+  }
+
+  function openAdminPopup() { showPopupAdmin('adminPopup'); }
+  function closeAdminPopup() { closePopupAdmin('adminPopup'); }
+
+  function openAdminDebitPopup() { showPopupAdmin('adminDebitPopup'); }
+  function closeAdminDebitPopup() { closePopupAdmin('adminDebitPopup'); }
+
+  function openAdminDeletePopup() { showPopupAdmin('adminDeletePopup'); }
+  function closeAdminDeletePopup() { closePopupAdmin('adminDeletePopup'); }
+
+  function showPopupAdmin(id) {
+    document.getElementById('overlay').style.display = 'block';
+    document.getElementById(id).style.display = 'block';
+  }
+
+  function closePopupAdmin(id) {
+    document.getElementById('overlay').style.display = 'none';
+    document.getElementById(id).style.display = 'none';
+  }
+
+  function addCreditsToUser() {
+    const user = document.getElementById('targetUser').value.trim();
+    const amount = Number(document.getElementById('creditAmount').value);
+    if (!user || isNaN(amount) || amount <= 0) {
+      showPopup('Vui lòng nhập đúng thông tin.');
+      return;
+    }
+    const users = JSON.parse(localStorage.getItem('users') || '{}');
+    if (!users[user]) {
+      showPopup('Tài khoản không tồn tại.');
+      return;
+    }
+    let creditData = JSON.parse(localStorage.getItem('credits') || '{}');
+    creditData[user] = (creditData[user] || 0) + amount;
+    localStorage.setItem('credits', JSON.stringify(creditData));
+    showPopup('Đã cộng ' + amount + ' credit cho ' + user);
+    closeAdminPopup();
+  }
+
+  function deductCreditsFromUser() {
+    const user = document.getElementById('targetUserDebit').value.trim();
+    const amount = Number(document.getElementById('creditAmountDebit').value);
+    if (!user || isNaN(amount) || amount <= 0) {
+      showPopup('Vui lòng nhập đúng thông tin.');
+      return;
+    }
+    const users = JSON.parse(localStorage.getItem('users') || '{}');
+    if (!users[user]) {
+      showPopup('Tài khoản không tồn tại.');
+      return;
+    }
+    let creditData = JSON.parse(localStorage.getItem('credits') || '{}');
+    creditData[user] = Math.max((creditData[user] || 0) - amount, 0);
+    localStorage.setItem('credits', JSON.stringify(creditData));
+    showPopup('Đã trừ ' + amount + ' credit của ' + user);
+    closeAdminDebitPopup();
+  }
+
+  function deleteUser() {
+    const user = document.getElementById('targetUserDelete').value.trim();
+    if (!user) {
+      showPopup('Vui lòng nhập tên tài khoản cần xóa.');
+      return;
+    }
+    let users = JSON.parse(localStorage.getItem('users') || '{}');
+    if (!users[user]) {
+      showPopup('Tài khoản không tồn tại.');
+      return;
+    }
+    delete users[user];
+    localStorage.setItem('users', JSON.stringify(users));
+    let creditData = JSON.parse(localStorage.getItem('credits') || '{}');
+    if (creditData[user]) {
+      delete creditData[user];
+      localStorage.setItem('credits', JSON.stringify(creditData));
+    }
+    showPopup('Đã xóa tài khoản ' + user);
+    closeAdminDeletePopup();
+  }
+
+  document.addEventListener('keydown', function(e) {
+    if (
+      e.key === 'F12' ||
+      (e.ctrlKey && e.shiftKey && ['I', 'J', 'C'].includes(e.key.toUpperCase())) ||
+      (e.ctrlKey && e.key.toUpperCase() === 'U')
+    ) {
+      e.preventDefault();
+      showPopup('Mở Developer Console bị cấm!');
+      return false;
+    }
+  });
+</script>
+</body>
+</html>
